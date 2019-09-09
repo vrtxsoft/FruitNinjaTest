@@ -9,195 +9,194 @@
 import SpriteKit
 import GameplayKit
 
-class GameScene: SKScene {
+class GameScene: SKScene ,SKPhysicsContactDelegate{
+    
+    let Fruits = ["pine","apple","banana","apple","pine","banana"]
     
     
-   let Fruits = ["pine","apple","banana","apple","pine","banana"]
+    var levelTimerLabel = SKLabelNode(fontNamed: "ArialMT")
     
-    var gameTimer: Timer?
+    //Immediately after leveTimerValue variable is set, update label's text
+    var levelTimerValue: Int = 60 {
+        didSet {
+            levelTimerLabel.text = "Time left: \(levelTimerValue)"
+        }
+    }
+    
+    var nameCounter = 0
+    var CreateCounter: Timer?
     
     
     var Circle : SKShapeNode!
     var pineAppleNode : SKSpriteNode!
     
-    let PineAppleCategory  : UInt32 = 0x1 << 1
+    let fruitCategory  : UInt32 = 0x1 << 1
     let BladeCategory: UInt32 = 0x1 << 2
-    let RedBarCategory : UInt32 = 0x1 << 6
-
+//    let RedBarCategory : UInt32 = 0x1 << 6
+    
     
     override func didMove(to view: SKView) {
-        physicsWorld.speed = 0.5
         
-        // Get label node from scene and store it for use later
-//        SKAction.removeFromParent()
+        
+        physicsWorld.contactDelegate = self
+        
+        levelTimerLabel.fontColor = .black
+        levelTimerLabel.fontSize = 40
+        levelTimerLabel.position = CGPoint(x: size.width/2, y: size.height/2 + 350)
+        levelTimerLabel.text = "Time left: \(levelTimerValue) sec."
+        addChild(levelTimerLabel)
+        
+        let wait = SKAction.wait(forDuration: 1)
+        
+        let block = SKAction.run({
+            [unowned self] in
+            if self.levelTimerValue > 0 {
+                self.levelTimerValue -= 1
+            }else{
+                
+                self.removeAction(forKey: "countdown")
+                self.CreateCounter?.invalidate()
+                self.view?.isPaused = true
+                print("Game End")
+            }
+        })
+        
+        let sequence = SKAction.sequence([wait,block])
+        run(SKAction.repeatForever(sequence), withKey: "countdown")
+        
+        
+        physicsWorld.speed = 0.5
         physicsWorld.gravity.dy = -4.0
         
-        createPineApple()
-        gameTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true, block: { (time) in
-            
-                            self.createPineApple()
-
-            
-//            for n in 1...2 {
-//
-//                self.createPineApple()
-//            }
-            
+        self.view?.isMultipleTouchEnabled = false
+       
+        CreateCounter = Timer.scheduledTimer(withTimeInterval: 10 , repeats: true, block: { (time) in
+            self.createPineApple()
         })
         
     }
     
     
     func createPineApple() {
-
+        
+        if nameCounter == 7 {
+            nameCounter = 0
+        }
+        
+        nameCounter  += 1
+        
         let fruitSprite = (Fruits.shuffled().randomElement())
-        print(fruitSprite)
+//        print(fruitSprite)
         
         let randomNumer =  arc4random_uniform(10)
         let randomFloat = CGFloat.random(in: 0.7...1.5)
         let randomAngular = arc4random_uniform(2)
-       let angularMotion : CGFloat = randomAngular == 0 ? 1 : -1
+        let angularMotion : CGFloat = randomAngular == 0 ? 1 : -1
         
         
         
         let screenSize = UIScreen.main.bounds
         var ScreenWidth = CGFloat(arc4random_uniform(UInt32(screenSize.width)))
         
-//        print("random nmber")
-//        print(randomNumer)
-//        print(ScreenWidth)
-//        print("angularMotion")
-//        print(angularMotion)
-        
-        
         pineAppleNode = SKSpriteNode(imageNamed: fruitSprite!)
-        pineAppleNode.name = "pineNode"
-        pineAppleNode.zPosition = 1.0;
-//        pineAppleNode.lightingBitMask = 1
-////        pineAppleNode.shadowedBitMask = 1
-//        pineAppleNode.shadowCastBitMask = 1
+        pineAppleNode.name = "pineNode\(String(nameCounter))"
+        pineAppleNode.zPosition = 3.0;
+        pineAppleNode.setScale(randomFloat)
         
         
- //        pineAppleNode.size.width = pineAppleNode.size.width / 6
-//        pineAppleNode.size.height = pineAppleNode.size.height / 6
-       
-          pineAppleNode.setScale(randomFloat)
-        
-        
-        
-            if ScreenWidth >= 1000 {
-//                print(ScreenWidth)
-//            print("maximum")
-                ScreenWidth = 750
-                
-            }else if ScreenWidth <= 100{
-//                print(ScreenWidth)
-//                print("Minnumin X")
-                
-                ScreenWidth = 200
+        if ScreenWidth >= 1000 {
+            ScreenWidth = 750
+        }else if ScreenWidth <= 100{
+            ScreenWidth = 200
         }
         
-        
-       
-        
-//        pineAppleNode.position = CGPoint(x:ScreenWidth , y:UIScreen.main.bounds.height + pineAppleNode.size.height + CGFloat.random(in: 0...200));
         pineAppleNode.position = CGPoint(x:ScreenWidth + CGFloat(arc4random_uniform(UInt32(50))) , y:UIScreen.main.bounds.height + pineAppleNode.size.height);
         
         pineAppleNode.physicsBody = SKPhysicsBody(rectangleOf: pineAppleNode.size)
-        
-//        pineAppleNode.physicsBody = SKPhysicsBody(circleOfRadius: max(pineAppleNode.size.width, pineAppleNode.size.height))
-        
         pineAppleNode.physicsBody?.allowsRotation = true
-       
-        
         pineAppleNode.physicsBody?.angularVelocity = 2  * angularMotion
-        
-        
+        pineAppleNode.physicsBody?.categoryBitMask = fruitCategory
         pineAppleNode.physicsBody?.collisionBitMask = 0
-
-
-         pineAppleNode.physicsBody?.contactTestBitMask = BladeCategory
-//        pineAppleNode.physicsBody?.collisionBitMask = RedBarCategory
+        pineAppleNode.physicsBody?.contactTestBitMask = BladeCategory
         pineAppleNode.physicsBody?.affectedByGravity = true
         
         addChild(pineAppleNode)
-
+        
     }
-    
-    
-//    override func touchesBegan(touches: Set<UITouch>, withEvent event: UIEvent?) {
-//        let touch = touches.first as UITouch!
-//        let touchLocation = touch.locationInNode(self)
-//        let targetNode = nodeAtPoint(touchLocation) as! SKSpriteNode
-//    }
     
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-
         let touch = touches.first as UITouch?
         let touchLocation = touch!.location(in: self)
-
-            Circle = SKShapeNode(circleOfRadius: 40)
-            Circle.name = "CircleTap"
-            Circle.strokeColor = SKColor.black
-            Circle.glowWidth = 10.0
-            Circle.fillColor = SKColor.yellow
-            Circle.physicsBody = SKPhysicsBody(circleOfRadius: 40)
-            Circle.physicsBody?.isDynamic = true //.physicsBody?.dynamic = true
-            self.addChild(Circle)
+        
         
 
-//        if targetNode.name == "pineNode" {
-//
-//            targetNode.removeFromParent()
-//
-//        }
-
+        
+        Circle = SKShapeNode(circleOfRadius: 40)
+        Circle.position = touchLocation
+        Circle.name = "CircleTap"
+        Circle.strokeColor = .orange
+        Circle.glowWidth = 10.0
+        Circle.fillColor = SKColor.red
+        Circle.zPosition = 5.0
+        Circle.physicsBody = SKPhysicsBody(circleOfRadius: 40)
+        Circle.physicsBody?.categoryBitMask = BladeCategory
+        Circle.physicsBody?.contactTestBitMask = fruitCategory
+//        Circle.physicsBody?.collisionBitMask
+        Circle.physicsBody?.isDynamic = false //.physicsBody?.dynamic = true
+        self.addChild(Circle)
+        
     }
     
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
     
-//    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-//        for touch in touches{
-//            let location = touch.location(in: self)
-//
-//            let targetNode = atPoint(location)
-//
-//            if targetNode.name == "pineNode" {
-//
-//                targetNode.removeFromParent()
-//
-//            }
-//
-//
-//
-//        }
-//    }
+        for touch in touches{
+            
+           let newTouch = touch.location(in: self)
+            
+            
+            Circle.position = newTouch
+        }
+    }
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        Circle.removeFromParent()
+    }
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        Circle.removeFromParent()
+    }
+    
+    func didBegin(_ contact: SKPhysicsContact) {
+         print("Contact ocur")
+        
+         print("The \(contact.bodyA.node!.name!) entered in contact with the \(contact.bodyB.node!.name!)")
+    }
     
     override func update(_ currentTime: TimeInterval) {
         // Called before each frame is rendered
-//        createPineApple()
-
-        if let rock = self.childNode(withName: "pineNode") {
-    
-    
-           
-            if rock.position.y <= 0 {
+        //        createPineApple()
+//        print(pineAppleNode.name)
+        
+        
+        for i in 1...7{
+            
+            if let rock = self.childNode(withName: "pineNode\(i)") {
+            
                 
-                
-                rock.removeFromParent()
-                //                pineAppleNode.removeFromParent()
+                if rock.position.y <= 0 {
+                    print(rock.name)
+                    rock.removeFromParent()
+                    
+                    
+                }
                 
             }
-
-//            if  !intersects(rock){
-//                print("out of screen")
-////
-//
-//            }
-
+            
+            
+            
         }
-
-
+       
+        
     }
     
     
